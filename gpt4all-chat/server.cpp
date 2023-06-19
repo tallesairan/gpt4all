@@ -154,10 +154,7 @@ QHttpServerResponse Server::handleCompletionRequest(const QHttpServerRequest &re
         std::cerr << "ERROR: invalid json in completions body" << std::endl;
         return QHttpServerResponse(QHttpServerResponder::StatusCode::NoContent);
     }
-#if defined(DEBUG)
-    printf("/v1/completions %s\n", qPrintable(document.toJson(QJsonDocument::Indented)));
-    fflush(stdout);
-#endif
+
     const QJsonObject body = document.object();
     if (!body.contains("model")) { // required
         std::cerr << "ERROR: completions contains no model" << std::endl;
@@ -221,6 +218,11 @@ QHttpServerResponse Server::handleCompletionRequest(const QHttpServerRequest &re
     bool echo = false;
     if (body.contains("echo"))
         echo = body["echo"].toBool();
+
+
+    const QString customTemplate = "";
+    if (body.contains("prompt_template"))
+        const QString customTemplate = body["prompt_template"].toString();
 
     // We currently don't support any of the following...
 #if 0
@@ -304,7 +306,13 @@ QHttpServerResponse Server::handleCompletionRequest(const QHttpServerRequest &re
 
     QSettings settings;
     settings.sync();
-    const QString promptTemplate = settings.value("promptTemplate", "%1").toString();
+
+    if(customTemplate.isEmpty()) {
+        const QString promptTemplate = customTemplate;
+    }else{
+        const QString promptTemplate = settings.value("promptTemplate", "%1").toString();
+    }
+    
     const float top_k = settings.value("topK", m_ctx.top_k).toDouble();
     const int n_batch = settings.value("promptBatchSize", m_ctx.n_batch).toInt();
     const float repeat_penalty = settings.value("repeatPenalty", m_ctx.repeat_penalty).toDouble();
@@ -340,7 +348,7 @@ QHttpServerResponse Server::handleCompletionRequest(const QHttpServerRequest &re
     }
 
     QJsonObject responseObject;
-    responseObject.insert("id", "foobarbaz");
+    responseObject.insert("id", time());
     responseObject.insert("object", "text_completion");
     responseObject.insert("created", QDateTime::currentSecsSinceEpoch());
     responseObject.insert("model", modelName());
